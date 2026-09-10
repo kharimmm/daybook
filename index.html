@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daybook</title>
+
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-180.png" />
+<meta name="theme-color" content="#262B3D" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Daybook" />
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&display=swap');
+
+  :root{
+    --paper: #EEE8DB;
+    --paper-light: #F8F4EA;
+    --ink: #262B3D;
+    --ink-soft: #726C5C;
+    --line: #D9D0B9;
+    --good: #B0812A;
+    --okay: #7C8768;
+    --rough: #A8483F;
+    --good-bg: rgba(176,129,42,0.14);
+    --okay-bg: rgba(124,135,104,0.16);
+    --rough-bg: rgba(168,72,63,0.14);
+    --radius: 7px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  *{ box-sizing: border-box; }
+
+  html,body{
+    margin:0; padding:0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Work Sans', sans-serif;
+    min-height: 100vh;
+  }
+
+  button{ font-family: inherit; cursor:pointer; }
+  input, textarea{ font-family: inherit; }
+
+  :focus-visible{
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  #app{
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 32px 20px 60px;
+  }
+
+  .topbar{
+    display:flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 18px;
+  }
+
+  .brand{
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-style: italic;
+    font-size: 28px;
+    margin: 0;
+    letter-spacing: 0.2px;
+  }
+
+  .month-nav{
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .month-label{
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    min-width: 168px;
+    text-align:center;
+  }
+
+  .nav-btn{
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    width: 32px; height: 32px;
+    font-size: 16px;
+    color: var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    transition: background 0.15s ease;
+  }
+  .nav-btn:hover{ background: var(--paper-light); }
+
+  .today-btn{
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0 12px;
+    height: 32px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .today-btn:hover{ background: var(--paper-light); color: var(--ink); }
+
+  .install-btn{
+    background: var(--ink);
+    border: 1px solid var(--ink);
+    border-radius: var(--radius);
+    padding: 0 14px;
+    height: 32px;
+    font-size: 13px;
+    color: var(--paper-light);
+    display:flex; align-items:center; gap:7px;
+    transition: opacity 0.15s ease;
+  }
+  .install-btn:hover{ opacity: 0.85; }
+  .install-glyph{
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--good);
+    flex-shrink: 0;
+  }
+
+  .ios-tip{
+    max-width: 760px;
+    margin: 0 auto 20px;
+    padding: 10px 14px;
+    background: var(--paper-light);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    font-size: 13px;
+    color: var(--ink-soft);
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .ios-tip button{
+    background:none; border:none;
+    color: var(--ink-soft);
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+  .ios-tip button:hover{ color: var(--ink); }
+
+  .weekday-row{
+    display:grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .weekday-row span{
+    text-align:center;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  .calendar-grid{
+    display:grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+  }
+
+  .day-cell{
+    position: relative;
+    background: var(--paper-light);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    aspect-ratio: 1 / 0.88;
+    min-height: 56px;
+    padding: 8px;
+    display:flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: border-color 0.15s ease, transform 0.1s ease;
+  }
+  .day-cell:hover{ border-color: var(--ink-soft); }
+  .day-cell:active{ transform: scale(0.98); }
+  .day-cell.blank{ background: transparent; border-color: transparent; pointer-events: none; }
+  .day-cell.today{ border-color: var(--ink); border-width: 1.5px; }
+
+  .day-num{
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .day-cell.mood-good{ background: var(--good-bg); }
+  .day-cell.mood-okay{ background: var(--okay-bg); }
+  .day-cell.mood-rough{ background: var(--rough-bg); }
+
+  .day-meta{
+    display:flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+  }
+
+  .task-badge{
+    font-size: 10px;
+    color: var(--ink-soft);
+  }
+
+  .mic-dot{
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--ink-soft);
+    flex-shrink: 0;
+  }
+
+  .legend{
+    display:flex;
+    gap: 18px;
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    flex-wrap: wrap;
+  }
+  .legend .dot{
+    display:inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .legend .dot.good{ background: var(--good); }
+  .legend .dot.okay{ background: var(--okay); }
+  .legend .dot.rough{ background: var(--rough); }
+
+  /* Overlay + panel */
+  .overlay{
+    position: fixed; inset: 0;
+    background: rgba(38,43,61,0.32);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 20;
+  }
+  .overlay.open{ opacity: 1; pointer-events: auto; }
+
+  .day-panel{
+    position: fixed;
+    top: 0; right: 0;
+    height: 100vh;
+    width: 400px;
+    max-width: 100vw;
+    background: var(--paper-light);
+    border-left: 1px solid var(--line);
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    z-index: 21;
+    display:flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .day-panel.open{ transform: translateX(0); }
+
+  @media (max-width: 640px){
+    .day-panel{
+      width: 100%;
+      top: auto;
+      bottom: 0;
+      height: 88vh;
+      border-left: none;
+      border-top: 1px solid var(--line);
+      border-radius: 14px 14px 0 0;
+      transform: translateY(100%);
+    }
+    .day-panel.open{ transform: translateY(0); }
+  }
+
+  .panel-header{
+    display:flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 22px 24px 16px;
+    border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+
+  .panel-date-num{
+    font-family: 'Fraunces', serif;
+    font-size: 34px;
+    line-height: 1;
+  }
+  .panel-date-sub{
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-top: 4px;
+  }
+
+  .close-btn{
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    width: 30px; height: 30px;
+    font-size: 16px;
+    color: var(--ink-soft);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .close-btn:hover{ color: var(--ink); }
+
+  .panel-body{
+    padding: 20px 24px 40px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .section-label{
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-bottom: 10px;
+  }
+
+  section{ margin-bottom: 26px; }
+
+  .mood-buttons{
+    display:flex;
+    gap: 8px;
+  }
+  .mood-btn{
+    flex: 1;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    border-radius: 18px;
+    padding: 9px 0;
+    font-size: 13px;
+    color: var(--ink-soft);
+    transition: all 0.15s ease;
+  }
+  .mood-btn.good.active{ background: var(--good); border-color: var(--good); color: #fff; }
+  .mood-btn.okay.active{ background: var(--okay); border-color: var(--okay); color: #fff; }
+  .mood-btn.rough.active{ background: var(--rough); border-color: var(--rough); color: #fff; }
+  .mood-btn:hover:not(.active){ border-color: var(--ink-soft); }
+
+  .task-list{ margin-bottom: 10px; }
+  .task-row{
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .task-row:last-child{ border-bottom: none; }
+  .task-row input[type="checkbox"]{
+    width: 16px; height: 16px;
+    accent-color: var(--ink);
+    flex-shrink: 0;
+  }
+  .task-text{
+    flex: 1;
+    font-size: 14px;
+  }
+  .task-row.done .task-text{
+    text-decoration: line-through;
+    color: var(--ink-soft);
+  }
+  .task-del{
+    background:none; border:none;
+    color: var(--ink-soft);
+    font-size: 15px;
+    padding: 2px 4px;
+  }
+  .task-del:hover{ color: var(--rough); }
+
+  .task-form{
+    display:flex;
+    gap: 8px;
+  }
+  .task-form input{
+    flex: 1;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    font-size: 13px;
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .task-form button{
+    border: 1px solid var(--line);
+    background: var(--paper);
+    border-radius: var(--radius);
+    padding: 0 14px;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .task-form button:hover{ background: var(--ink); color: var(--paper); }
+
+  .ruled-paper{
+    width: 100%;
+    min-height: 110px;
+    resize: vertical;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    font-size: 14px;
+    line-height: 24px;
+    background:
+      repeating-linear-gradient(var(--paper) 0px, var(--paper) 23px, var(--line) 24px);
+    color: var(--ink);
+  }
+  .ruled-paper:focus{ background: var(--paper); }
+
+  .record-btn{
+    display:flex; align-items:center; gap: 8px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    border-radius: 18px;
+    padding: 9px 16px;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .record-btn:hover{ border-color: var(--rough); }
+  .rec-dot{
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--rough);
+  }
+
+  .voice-recording{
+    display:flex; align-items:center; gap: 10px;
+    font-size: 13px;
+  }
+  .rec-pulse{
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--rough);
+    animation: pulse 1s infinite ease-in-out;
+  }
+  @keyframes pulse{
+    0%, 100%{ opacity: 1; }
+    50%{ opacity: 0.35; }
+  }
+  .voice-recording button{
+    border: 1px solid var(--line);
+    background: var(--paper);
+    border-radius: var(--radius);
+    padding: 6px 14px;
+    font-size: 13px;
+    margin-left: auto;
+  }
+  .voice-recording button:hover{ background: var(--ink); color: var(--paper); }
+
+  .voice-player{
+    display:flex; align-items:center; gap: 10px;
+  }
+  .voice-player audio{
+    flex: 1;
+    height: 36px;
+  }
+  .voice-player button{
+    border: 1px solid var(--line);
+    background: var(--paper);
+    border-radius: var(--radius);
+    padding: 6px 12px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    flex-shrink: 0;
+  }
+  .voice-player button:hover{ color: var(--rough); border-color: var(--rough); }
+
+  .voice-note{
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 8px;
+  }
+
+  .hidden{ display: none !important; }
+
+  .save-indicator{
+    position: absolute;
+    bottom: 16px; left: 24px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .save-indicator.show{ opacity: 1; }
+
+  .loading-text{
+    color: var(--ink-soft);
+    font-size: 13px;
+    padding: 40px 0;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="topbar">
+    <h1 class="brand">Daybook</h1>
+    <div class="month-nav">
+      <button class="nav-btn" id="prevMonth" aria-label="Previous month">‹</button>
+      <div class="month-label" id="monthLabel">—</div>
+      <button class="nav-btn" id="nextMonth" aria-label="Next month">›</button>
+      <button class="today-btn" id="todayBtn">Today</button>
+      <button class="install-btn hidden" id="installBtn"><span class="install-glyph"></span>Install app</button>
+    </div>
+  </div>
+
+  <div class="ios-tip hidden" id="iosTip">
+    <span>On iPhone or iPad: tap Share, then "Add to Home Screen" to install Daybook.</span>
+    <button id="iosTipClose" aria-label="Dismiss">×</button>
+  </div>
+
+  <div class="weekday-row">
+    <span>sun</span><span>mon</span><span>tue</span><span>wed</span><span>thu</span><span>fri</span><span>sat</span>
+  </div>
+
+  <div class="calendar-grid" id="calendarGrid">
+    <div class="loading-text">Loading…</div>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot good"></span>good day</span>
+    <span><span class="dot okay"></span>okay day</span>
+    <span><span class="dot rough"></span>rough day</span>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<aside class="day-panel" id="dayPanel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-date-num" id="panelDateNum">1</div>
+      <div class="panel-date-sub" id="panelDateSub">—</div>
+    </div>
+    <button class="close-btn" id="closePanel" aria-label="Close">×</button>
+  </div>
+
+  <div class="panel-body">
+    <section class="mood-section">
+      <div class="section-label">How did it go</div>
+      <div class="mood-buttons">
+        <button class="mood-btn good" data-mood="good">Good</button>
+        <button class="mood-btn okay" data-mood="okay">Okay</button>
+        <button class="mood-btn rough" data-mood="rough">Rough</button>
+      </div>
+    </section>
+
+    <section class="tasks-section">
+      <div class="section-label">Tasks</div>
+      <div class="task-list" id="taskList"></div>
+      <form class="task-form" id="taskForm">
+        <input type="text" id="taskInput" placeholder="Add a task" maxlength="140" autocomplete="off" />
+        <button type="submit">Add</button>
+      </form>
+    </section>
+
+    <section class="notes-section">
+      <div class="section-label">Notes</div>
+      <textarea class="ruled-paper" id="noteInput" placeholder="What happened today..."></textarea>
+    </section>
+
+    <section class="voice-section">
+      <div class="section-label">Voice memo</div>
+      <div id="voiceEmpty">
+        <button class="record-btn" id="recordBtn"><span class="rec-dot"></span>Record</button>
+        <div class="voice-note" id="voiceError"></div>
+      </div>
+      <div class="voice-recording hidden" id="voiceRecording">
+        <span class="rec-pulse"></span>
+        <span id="recordTimer">0:00</span>
+        <button id="stopBtn">Stop</button>
+      </div>
+      <div class="voice-player hidden" id="voicePlayer">
+        <audio id="audioEl" controls></audio>
+        <button id="deleteAudioBtn">Delete</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="save-indicator" id="saveIndicator">Saved</div>
+</aside>
+
+<script>
+(function(){
+  const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const WEEKDAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const MAX_RECORD_SECONDS = 180;
+
+  let viewDate = new Date();
+  viewDate.setDate(1);
+  let monthData = {};           // { "05": {mood, note, tasks, audio} }
+  let selectedDayKey = null;    // "05"
+  let mediaRecorder = null;
+  let recordChunks = [];
+  let recordTimerHandle = null;
+  let recordSeconds = 0;
+  let noteDebounce = null;
+
+  // Persists to the browser's own storage. Works on any real deployment
+  // (unlike window.storage, which only exists inside Claude's artifact preview).
+  // Data lives per-browser/device only — no cross-device sync.
+  const storage = {
+    async get(key){
+      const v = localStorage.getItem(key);
+      return v !== null ? { key, value: v } : null;
+    },
+    async set(key, value){
+      localStorage.setItem(key, value);
+      return { key, value };
+    }
+  };
+
+  const el = (id) => document.getElementById(id);
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const monthKey = (d) => `month:${d.getFullYear()}-${pad2(d.getMonth()+1)}`;
+  const todayStr = () => {
+    const t = new Date();
+    return `${t.getFullYear()}-${pad2(t.getMonth()+1)}-${pad2(t.getDate())}`;
+  };
+
+  function emptyDay(){
+    return { mood: null, note: "", tasks: [], audio: null };
+  }
+
+  async function loadMonth(){
+    el("calendarGrid").innerHTML = '<div class="loading-text">Loading…</div>';
+    try{
+      const res = await storage.get(monthKey(viewDate));
+      monthData = res && res.value ? JSON.parse(res.value) : {};
+    }catch(e){
+      monthData = {};
+    }
+    renderCalendar();
+  }
+
+  async function persistMonth(){
+    try{
+      await storage.set(monthKey(viewDate), JSON.stringify(monthData));
+      flashSaved();
+    }catch(e){
+      console.error("Could not save:", e);
+    }
+  }
+
+  function flashSaved(){
+    const ind = el("saveIndicator");
+    ind.classList.add("show");
+    clearTimeout(flashSaved._t);
+    flashSaved._t = setTimeout(() => ind.classList.remove("show"), 1200);
+  }
+
+  function renderMonthLabel(){
+    el("monthLabel").textContent = `${MONTH_NAMES[viewDate.getMonth()]} ${viewDate.getFullYear()}`;
+  }
+
+  function renderCalendar(){
+    renderMonthLabel();
+    const grid = el("calendarGrid");
+    grid.innerHTML = "";
+
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    const firstDayIdx = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = todayStr();
+
+    for(let i = 0; i < firstDayIdx; i++){
+      const blank = document.createElement("div");
+      blank.className = "day-cell blank";
+      grid.appendChild(blank);
+    }
+
+    for(let day = 1; day <= daysInMonth; day++){
+      const dKey = pad2(day);
+      const dStr = `${year}-${pad2(month+1)}-${dKey}`;
+      const data = monthData[dKey];
+
+      const cell = document.createElement("div");
+      cell.className = "day-cell";
+      if(data && data.mood){ cell.classList.add(`mood-${data.mood}`); }
+      if(dStr === today){ cell.classList.add("today"); }
+
+      const num = document.createElement("div");
+      num.className = "day-num";
+      num.textContent = day;
+      cell.appendChild(num);
+
+      const meta = document.createElement("div");
+      meta.className = "day-meta";
+
+      const badge = document.createElement("span");
+      badge.className = "task-badge";
+      if(data && data.tasks && data.tasks.length){
+        const done = data.tasks.filter(t => t.done).length;
+        badge.textContent = `${done}/${data.tasks.length}`;
+      }
+      meta.appendChild(badge);
+
+      if(data && data.audio){
+        const mic = document.createElement("span");
+        mic.className = "mic-dot";
+        meta.appendChild(mic);
+      }
+
+      cell.appendChild(meta);
+      cell.addEventListener("click", () => openPanel(dKey));
+      grid.appendChild(cell);
+    }
+  }
+
+  function openPanel(dKey){
+    selectedDayKey = dKey;
+    if(!monthData[dKey]) monthData[dKey] = emptyDay();
+    const data = monthData[dKey];
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    const dateObj = new Date(year, month, parseInt(dKey, 10));
+
+    el("panelDateNum").textContent = parseInt(dKey, 10);
+    el("panelDateSub").textContent = `${WEEKDAY_NAMES[dateObj.getDay()]}, ${MONTH_NAMES[month]}`;
+
+    document.querySelectorAll(".mood-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.mood === data.mood);
+    });
+
+    el("noteInput").value = data.note || "";
+    renderTasks();
+    renderVoice();
+
+    el("overlay").classList.add("open");
+    el("dayPanel").classList.add("open");
+  }
+
+  function closePanel(){
+    if(mediaRecorder && mediaRecorder.state === "recording"){
+      stopRecording();
+    }
+    el("overlay").classList.remove("open");
+    el("dayPanel").classList.remove("open");
+    selectedDayKey = null;
+    renderCalendar();
+  }
+
+  function currentDay(){
+    return monthData[selectedDayKey];
+  }
+
+  // ---- Mood ----
+  document.querySelectorAll(".mood-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const data = currentDay();
+      const mood = btn.dataset.mood;
+      data.mood = data.mood === mood ? null : mood;
+      document.querySelectorAll(".mood-btn").forEach(b => {
+        b.classList.toggle("active", b.dataset.mood === data.mood);
+      });
+      persistMonth();
+    });
+  });
+
+  // ---- Tasks ----
+  function renderTasks(){
+    const list = el("taskList");
+    list.innerHTML = "";
+    const data = currentDay();
+    (data.tasks || []).forEach(task => {
+      const row = document.createElement("div");
+      row.className = "task-row" + (task.done ? " done" : "");
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = task.done;
+      cb.addEventListener("change", () => {
+        task.done = cb.checked;
+        row.classList.toggle("done", task.done);
+        persistMonth();
+        renderCalendar();
+      });
+
+      const text = document.createElement("span");
+      text.className = "task-text";
+      text.textContent = task.text;
+
+      const del = document.createElement("button");
+      del.className = "task-del";
+      del.textContent = "×";
+      del.setAttribute("aria-label", "Delete task");
+      del.addEventListener("click", () => {
+        data.tasks = data.tasks.filter(t => t.id !== task.id);
+        renderTasks();
+        persistMonth();
+        renderCalendar();
+      });
+
+      row.appendChild(cb);
+      row.appendChild(text);
+      row.appendChild(del);
+      list.appendChild(row);
+    });
+  }
+
+  el("taskForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const input = el("taskInput");
+    const text = input.value.trim();
+    if(!text) return;
+    const data = currentDay();
+    if(!data.tasks) data.tasks = [];
+    data.tasks.push({ id: Date.now().toString(36), text, done: false });
+    input.value = "";
+    renderTasks();
+    persistMonth();
+    renderCalendar();
+  });
+
+  // ---- Notes ----
+  el("noteInput").addEventListener("input", (e) => {
+    const data = currentDay();
+    data.note = e.target.value;
+    clearTimeout(noteDebounce);
+    noteDebounce = setTimeout(persistMonth, 600);
+  });
+
+  // ---- Voice ----
+  function renderVoice(){
+    const data = currentDay();
+    el("voiceError").textContent = "";
+    el("voiceRecording").classList.add("hidden");
+    if(data.audio){
+      el("voiceEmpty").classList.add("hidden");
+      el("voicePlayer").classList.remove("hidden");
+      el("audioEl").src = `data:${data.audio.mimeType};base64,${data.audio.data}`;
+    }else{
+      el("voiceEmpty").classList.remove("hidden");
+      el("voicePlayer").classList.add("hidden");
+    }
+  }
+
+  el("recordBtn").addEventListener("click", async () => {
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordChunks = [];
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
+      mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+
+      mediaRecorder.addEventListener("dataavailable", (e) => {
+        if(e.data.size > 0) recordChunks.push(e.data);
+      });
+      mediaRecorder.addEventListener("stop", () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(recordChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = reader.result.split(",")[1];
+          const data = currentDay();
+          data.audio = { data: base64, mimeType: blob.type || "audio/webm" };
+          renderVoice();
+          persistMonth();
+          renderCalendar();
+        };
+        reader.readAsDataURL(blob);
+      });
+
+      mediaRecorder.start();
+      recordSeconds = 0;
+      el("recordTimer").textContent = "0:00";
+      el("voiceEmpty").classList.add("hidden");
+      el("voiceRecording").classList.remove("hidden");
+
+      recordTimerHandle = setInterval(() => {
+        recordSeconds++;
+        const m = Math.floor(recordSeconds / 60);
+        const s = recordSeconds % 60;
+        el("recordTimer").textContent = `${m}:${pad2(s)}`;
+        if(recordSeconds >= MAX_RECORD_SECONDS){
+          stopRecording();
+        }
+      }, 1000);
+
+    }catch(err){
+      el("voiceError").textContent = "Microphone access was blocked. Check your browser's site permissions and try again.";
+    }
+  });
+
+  function stopRecording(){
+    clearInterval(recordTimerHandle);
+    if(mediaRecorder && mediaRecorder.state === "recording"){
+      mediaRecorder.stop();
+    }
+    el("voiceRecording").classList.add("hidden");
+  }
+  el("stopBtn").addEventListener("click", stopRecording);
+
+  el("deleteAudioBtn").addEventListener("click", () => {
+    const data = currentDay();
+    data.audio = null;
+    renderVoice();
+    persistMonth();
+    renderCalendar();
+  });
+
+  // ---- Panel open/close ----
+  el("closePanel").addEventListener("click", closePanel);
+  el("overlay").addEventListener("click", closePanel);
+
+  // ---- Month nav ----
+  el("prevMonth").addEventListener("click", () => {
+    viewDate.setMonth(viewDate.getMonth() - 1);
+    loadMonth();
+  });
+  el("nextMonth").addEventListener("click", () => {
+    viewDate.setMonth(viewDate.getMonth() + 1);
+    loadMonth();
+  });
+  el("todayBtn").addEventListener("click", () => {
+    viewDate = new Date();
+    viewDate.setDate(1);
+    loadMonth();
+  });
+
+  // ---- Install to home screen (Android / desktop Chrome, Edge) ----
+  let deferredPrompt = null;
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    el("installBtn").classList.remove("hidden");
+  });
+
+  el("installBtn").addEventListener("click", async () => {
+    if(!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    el("installBtn").classList.add("hidden");
+  });
+
+  window.addEventListener("appinstalled", () => {
+    el("installBtn").classList.add("hidden");
+    el("iosTip").classList.add("hidden");
+  });
+
+  // ---- iOS install tip (no beforeinstallprompt support in Safari) ----
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  const isStandalone = window.navigator.standalone === true ||
+    window.matchMedia("(display-mode: standalone)").matches;
+
+  if(isIOS && !isStandalone){
+    storage.get("prefs:iosTipDismissed").then((res) => {
+      if(!res){ el("iosTip").classList.remove("hidden"); } // never dismissed before
+    });
+  }
+
+  el("iosTipClose").addEventListener("click", () => {
+    el("iosTip").classList.add("hidden");
+    storage.set("prefs:iosTipDismissed", "true");
+  });
+
+  // ---- Service worker (enables install + offline app shell once deployed) ----
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("service-worker.js").catch(() => {});
+    });
+  }
+
+  loadMonth();
+})();
+</script>
+
+</body>
+</html>
